@@ -19,7 +19,7 @@ A Cooperativa Votação é uma aplicação desenvolvida para gerenciar sessões 
 git clone https://github.com/leonardofribeirogmail/cooperativa.git
 cd cooperativa
 ```
-Construindo a Imagem Docker
+### Construindo a Imagem Docker <a name="docker">
 ```bash
 docker-compose build
 ```
@@ -37,11 +37,16 @@ A configuração das variáveis de ambiente está definida no arquivo applicatio
 - SCHEDULER_UPDATE_RATE
 - RESTTEMPLATE_CONNECT_TIMEOUT
 - RESTTEMPLATE_READ_TIMEOUT
-### Iniciando os Containers
-Para iniciar os containers Docker com o MySQL, a aplicação principal e o serviço de validação de CPF, use o seguinte comando:
-```bash
-docker-compose up
+
+#### Nota sobre CPF_VALIDATOR_URL
+Durante o desenvolvimento, a URL fornecida pela documentação (`https://user-info.herokuapp.com/users/{cpf}`) não estava disponível. Portanto, foi criado um serviço de validação (validator) parametrizado pela variável de ambiente `CPF_VALIDATOR_URL`. Você pode alterar facilmente para a URL da documentação comentada, se ela estiver disponível:
+
+```yaml
+cpf:
+  validator:
+    url: ${CPF_VALIDATOR_URL:http://validator:8081/users/{cpf}} #https://user-info.herokuapp.com/users/{cpf}
 ```
+Basta descomentar a URL da documentação e configurar a variável de ambiente de acordo. Como comportamento padrão, todos os serviços de docker se iniciam ao mesmo tempo. Conforme está descrito [aqui](#construindo-a-imagem-docker-a-namedocker).
 ### Uso
 #### Endpoints Disponíveis
 
