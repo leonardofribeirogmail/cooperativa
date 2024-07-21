@@ -19,7 +19,7 @@ A Cooperativa Votação é uma aplicação desenvolvida para gerenciar sessões 
 git clone https://github.com/leonardofribeirogmail/cooperativa.git
 cd cooperativa
 ```
-### Construindo a Imagem Docker <a name="docker">
+### Construindo a Imagem Docker
 ```bash
 docker-compose build
 ```
@@ -46,7 +46,7 @@ cpf:
   validator:
     url: ${CPF_VALIDATOR_URL:http://validator:8081/users/{cpf}} #https://user-info.herokuapp.com/users/{cpf}
 ```
-Basta descomentar a URL da documentação e configurar a variável de ambiente de acordo. Como comportamento padrão, todos os serviços de docker se iniciam ao mesmo tempo. Conforme está descrito [aqui](#construindo-a-imagem-docker-a-namedocker).
+Basta descomentar a URL da documentação e configurar a variável de ambiente de acordo. Como comportamento padrão, todos os serviços de docker se iniciam ao mesmo tempo. Conforme está descrito [aqui](#construindo-a-imagem-docker).
 ### Uso
 #### Endpoints Disponíveis
 
