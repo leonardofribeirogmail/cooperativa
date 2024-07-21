@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/cooperativa_votacao}
+    username: ${SPRING_DATASOURCE_USERNAME:usuario}
+    password: ${SPRING_DATASOURCE_PASSWORD:senha}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.MySQLDialect
+
+cors:
+  allowedOrigins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  allowedMethods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
+
+cpf:
+  validator:
+    url: ${CPF_VALIDATOR_URL:http://validator:8081/users/{cpf}} #https://user-info.herokuapp.com/users/{cpf}
+
+scheduler:
+  updateRate: ${SCHEDULER_UPDATE_RATE:900000}
+
+resttemplate:
+  connect:
+    timeout: ${RESTTEMPLATE_CONNECT_TIMEOUT:2000}
+  read:
+    timeout: ${RESTTEMPLATE_READ_TIMEOUT:2000}
+
+logging:
+  level:
+    root: INFO
+    com.example.cooperativa: INFO

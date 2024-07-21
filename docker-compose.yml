@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0.32
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: cooperativa_votacao
+      MYSQL_USER: usuario
+      MYSQL_PASSWORD: senha
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - cooperativa-network
+
+  app:
+    build: .
+    container_name: cooperativa-votacao
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/cooperativa_votacao
+      - SPRING_DATASOURCE_USERNAME=usuario
+      - SPRING_DATASOURCE_PASSWORD=senha
+      - CPF_VALIDATOR_URL=http://validator:8081/users/{cpf}
+    depends_on:
+      - mysql
+      - validator
+    networks:
+      - cooperativa-network
+
+  validator:
+    build:
+      context: ./validator
+    container_name: validator
+    ports:
+      - "8081:8081"
+    networks:
+      - cooperativa-network
+
+networks:
+  cooperativa-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
