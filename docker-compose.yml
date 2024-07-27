@@ -16,6 +16,14 @@ services:
     networks:
       - cooperativa-network
 
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - cooperativa-network
+
   app:
     build: .
     container_name: cooperativa-votacao
@@ -28,6 +36,7 @@ services:
       - CPF_VALIDATOR_URL=http://validator:8081/users/{cpf}
     depends_on:
       - mysql
+      - redis
       - validator
     networks:
       - cooperativa-network

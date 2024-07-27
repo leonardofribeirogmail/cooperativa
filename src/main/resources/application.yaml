@@ -9,10 +9,22 @@ spring:
     database-platform: org.hibernate.dialect.MySQLDialect
   cache:
     type: redis
+    redis:
+      time-to-live: 600000
   data:
     redis:
-      host: localhost
+      host: redis
       port: 6379
+  jackson:
+    serialization:
+      FAIL_ON_EMPTY_BEANS: false
+      WRITE_DATES_AS_TIMESTAMPS: false
+    deserialization:
+      FAIL_ON_UNKNOWN_PROPERTIES: false
+      ACCEPT_SINGLE_VALUE_AS_ARRAY: true
+    mapper:
+      ACCEPT_CASE_INSENSITIVE_PROPERTIES: true
+    default-property-inclusion: NON_NULL
 
 logging:
   level:
