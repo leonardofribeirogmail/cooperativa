@@ -1,6 +1,7 @@
 package com.example.cooperativa.service;
 
 import com.example.cooperativa.dto.SessaoVotacaoDTO;
+import com.example.cooperativa.exception.PautaNotFoundException;
 import com.example.cooperativa.exception.SessaoVotacaoNotFoundException;
 import com.example.cooperativa.model.Pauta;
 import com.example.cooperativa.model.SessaoVotacao;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -71,6 +73,16 @@ class SessaoVotacaoServiceTest {
     }
 
     @Test
+    void deveLancarPautaNotFoundExceptionAoCriarSessao() {
+        when(pautaRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(PautaNotFoundException.class, () -> sessaoVotacaoService.criarSessao(1L));
+
+        verify(pautaRepository, times(1)).findById(1L);
+        verifyNoMoreInteractions(sessaoVotacaoRepository);
+    }
+
+    @Test
     void deveListarSessoes() {
         final SessaoVotacao sessao1 = criarSessao(1L, LocalDateTime.now().minusDays(1), LocalDateTime.now(), false);
         final SessaoVotacao sessao2 = criarSessao(2L, LocalDateTime.now().minusDays(2), LocalDateTime.now().minusDays(1), true);
@@ -104,9 +116,35 @@ class SessaoVotacaoServiceTest {
     void deveLancarSessaoNaoEncontradaException() {
         when(sessaoVotacaoRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(SessaoVotacaoNotFoundException.class, ()-> sessaoVotacaoService.obterSessaoPorId(1L));
+        assertThrows(SessaoVotacaoNotFoundException.class, () -> sessaoVotacaoService.obterSessaoPorId(1L));
 
         verify(sessaoVotacaoRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    void deveEncerrarSessaoSeExpirada() {
+        final SessaoVotacao sessaoVotacao = criarSessao(1L, LocalDateTime.now().minusMinutes(2), LocalDateTime.now().minusMinutes(1), false);
+
+        when(sessaoVotacaoRepository.findById(1L)).thenReturn(Optional.of(sessaoVotacao));
+
+        sessaoVotacaoService.encerrarSessaoSeExpirada(1L);
+
+        assertTrue(sessaoVotacao.isEncerrada());
+        verify(sessaoVotacaoRepository).findById(1L);
+        verify(sessaoVotacaoRepository).save(sessaoVotacao);
+    }
+
+    @Test
+    void naoDeveEncerrarSessaoSeNaoExpirada() {
+        final SessaoVotacao sessaoVotacao = criarSessao(1L, LocalDateTime.now().minusMinutes(1), LocalDateTime.now().plusMinutes(1), false);
+
+        when(sessaoVotacaoRepository.findById(1L)).thenReturn(Optional.of(sessaoVotacao));
+
+        sessaoVotacaoService.encerrarSessaoSeExpirada(1L);
+
+        assertFalse(sessaoVotacao.isEncerrada());
+        verify(sessaoVotacaoRepository).findById(1L);
+        verify(sessaoVotacaoRepository, never()).save(any(SessaoVotacao.class));
     }
 
     private SessaoVotacao criarSessao(final Long id,
