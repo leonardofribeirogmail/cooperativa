@@ -1,6 +1,7 @@
 package com.example.cooperativa.service;
 
 import com.example.cooperativa.dto.SessaoVotacaoDTO;
+import com.example.cooperativa.exception.SessaoVotacaoNotFoundException;
 import com.example.cooperativa.model.Pauta;
 import com.example.cooperativa.model.SessaoVotacao;
 import com.example.cooperativa.repository.PautaRepository;
@@ -100,12 +101,10 @@ class SessaoVotacaoServiceTest {
     }
 
     @Test
-    void naoDeveObterSessaoPorIdQuandoNaoExistir() {
+    void deveLancarSessaoNaoEncontradaException() {
         when(sessaoVotacaoRepository.findById(1L)).thenReturn(Optional.empty());
 
-        final SessaoVotacaoDTO result = sessaoVotacaoService.obterSessaoPorId(1L);
-
-        assertNull(result);
+        assertThrows(SessaoVotacaoNotFoundException.class, ()-> sessaoVotacaoService.obterSessaoPorId(1L));
 
         verify(sessaoVotacaoRepository, times(1)).findById(1L);
     }
