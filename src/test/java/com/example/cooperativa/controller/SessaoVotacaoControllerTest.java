@@ -16,7 +16,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -75,10 +74,7 @@ class SessaoVotacaoControllerTest {
 
     @Test
     void deveListarSessoes() throws Exception {
-        List<SessaoVotacaoDTO> sessoes = Arrays.asList(
-                SessaoVotacaoDTO.builder().id(1L).pautaId(1L).inicio(LocalDateTime.now()).fim(LocalDateTime.now().plusHours(1)).build(),
-                SessaoVotacaoDTO.builder().id(2L).pautaId(2L).inicio(LocalDateTime.now()).fim(LocalDateTime.now().plusHours(1)).build()
-        );
+        final List<SessaoVotacaoDTO> sessoes = getSessaoVotacaoDTO();
 
         when(sessaoVotacaoService.listarSessoes()).thenReturn(sessoes);
 
@@ -106,7 +102,7 @@ class SessaoVotacaoControllerTest {
                 .fim(fim)
                 .build();
 
-        when(sessaoVotacaoService.obterSessaoPorId(sessaoId)).thenReturn(Optional.of(sessaoVotacaoDTO));
+        when(sessaoVotacaoService.obterSessaoPorId(sessaoId)).thenReturn(sessaoVotacaoDTO);
 
         mockMvc.perform(get("/api/sessoes/{id}", sessaoId)
                         .contentType(MediaType.APPLICATION_JSON))
@@ -123,12 +119,19 @@ class SessaoVotacaoControllerTest {
     void naoDeveObterSessaoPorId() throws Exception {
         final Long sessaoId = 1L;
 
-        when(sessaoVotacaoService.obterSessaoPorId(sessaoId)).thenReturn(Optional.empty());
+        when(sessaoVotacaoService.obterSessaoPorId(sessaoId)).thenReturn(null);
 
         mockMvc.perform(get("/api/sessoes/{id}", sessaoId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
 
         verify(sessaoVotacaoService, times(1)).obterSessaoPorId(sessaoId);
+    }
+
+    private List<SessaoVotacaoDTO> getSessaoVotacaoDTO() {
+        return Arrays.asList(
+                SessaoVotacaoDTO.builder().id(1L).pautaId(1L).inicio(LocalDateTime.now()).fim(LocalDateTime.now().plusHours(1)).build(),
+                SessaoVotacaoDTO.builder().id(2L).pautaId(2L).inicio(LocalDateTime.now()).fim(LocalDateTime.now().plusHours(1)).build()
+        );
     }
 }
