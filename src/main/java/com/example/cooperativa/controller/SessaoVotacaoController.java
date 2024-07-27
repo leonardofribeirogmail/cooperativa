@@ -37,7 +37,7 @@ public class SessaoVotacaoController {
     @GetMapping("/{id}")
     @Operation(summary = "Obtém uma sessão de votação pelo ID")
     public ResponseEntity<SessaoVotacaoDTO> obterSessaoPorId(@PathVariable Long id) {
-        final Optional<SessaoVotacaoDTO> sessaoVotacaoDTO = sessaoVotacaoService.obterSessaoPorId(id);
+        final Optional<SessaoVotacaoDTO> sessaoVotacaoDTO = Optional.ofNullable(sessaoVotacaoService.obterSessaoPorId(id));
         return sessaoVotacaoDTO
                 .map(dto -> new ResponseEntity<>(dto, HttpStatus.OK))
                 .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));

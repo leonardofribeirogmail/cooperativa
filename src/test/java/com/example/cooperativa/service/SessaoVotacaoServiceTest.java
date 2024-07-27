@@ -91,10 +91,10 @@ class SessaoVotacaoServiceTest {
 
         when(sessaoVotacaoRepository.findById(1L)).thenReturn(Optional.of(sessao));
 
-        final Optional<SessaoVotacaoDTO> result = sessaoVotacaoService.obterSessaoPorId(1L);
+        final SessaoVotacaoDTO result = sessaoVotacaoService.obterSessaoPorId(1L);
 
-        assertTrue(result.isPresent());
-        assertSessaoVotacaoDTO(sessao, result.get());
+        assertNotNull(result);
+        assertSessaoVotacaoDTO(sessao, result);
 
         verify(sessaoVotacaoRepository, times(1)).findById(1L);
     }
@@ -103,9 +103,9 @@ class SessaoVotacaoServiceTest {
     void naoDeveObterSessaoPorIdQuandoNaoExistir() {
         when(sessaoVotacaoRepository.findById(1L)).thenReturn(Optional.empty());
 
-        final Optional<SessaoVotacaoDTO> result = sessaoVotacaoService.obterSessaoPorId(1L);
+        final SessaoVotacaoDTO result = sessaoVotacaoService.obterSessaoPorId(1L);
 
-        assertTrue(result.isEmpty());
+        assertNull(result);
 
         verify(sessaoVotacaoRepository, times(1)).findById(1L);
     }
