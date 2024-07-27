@@ -7,6 +7,17 @@ spring:
     hibernate:
       ddl-auto: update
     database-platform: org.hibernate.dialect.MySQLDialect
+  cache:
+    type: redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+logging:
+  level:
+    root: INFO
+    com.example.cooperativa: INFO
 
 cors:
   allowedOrigins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
@@ -24,8 +35,3 @@ resttemplate:
     timeout: ${RESTTEMPLATE_CONNECT_TIMEOUT:2000}
   read:
     timeout: ${RESTTEMPLATE_READ_TIMEOUT:2000}
-
-logging:
-  level:
-    root: INFO
-    com.example.cooperativa: INFO

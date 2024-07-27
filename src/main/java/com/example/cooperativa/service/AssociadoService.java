@@ -7,6 +7,8 @@ import com.example.cooperativa.model.Associado;
 import com.example.cooperativa.repository.AssociadoRepository;
 import com.example.cooperativa.util.CPFUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,6 +21,7 @@ public class AssociadoService {
     private final CPFUtil cpfUtil;
     private final AssociadoRepository associadoRepository;
 
+    @CacheEvict(value = "associados", allEntries = true)
     public AssociadoResponseDTO criarAssociado(final CriarAssociadoDTO criarAssociadoDTO) {
         if (!cpfUtil.isCpfValido(criarAssociadoDTO.cpf())) {
             throw new IllegalArgumentException("CPF inválido: " + criarAssociadoDTO.cpf());
@@ -36,6 +39,7 @@ public class AssociadoService {
                 .build();
     }
 
+    @Cacheable("associados")
     public List<AssociadoResponseDTO> listarAssociados() {
         return associadoRepository.findAll().stream()
                 .map(associado -> AssociadoResponseDTO.builder()
