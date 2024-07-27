@@ -1,5 +1,6 @@
 package com.example.cooperativa.service;
 
+import com.example.cooperativa.dto.SessaoVotacaoDTO;
 import com.example.cooperativa.dto.VotoDTO;
 import com.example.cooperativa.enums.VotoEscolhido;
 import com.example.cooperativa.exception.*;
@@ -7,7 +8,6 @@ import com.example.cooperativa.model.Associado;
 import com.example.cooperativa.model.SessaoVotacao;
 import com.example.cooperativa.model.Voto;
 import com.example.cooperativa.repository.AssociadoRepository;
-import com.example.cooperativa.repository.SessaoVotacaoRepository;
 import com.example.cooperativa.repository.VotoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -30,13 +31,13 @@ class VotoServiceTest {
     private VotoRepository votoRepository;
 
     @Mock
-    private SessaoVotacaoRepository sessaoVotacaoRepository;
-
-    @Mock
     private AssociadoRepository associadoRepository;
 
     @Mock
     private CPFValidationService cpfValidationService;
+
+    @Mock
+    private SessaoVotacaoService sessaoVotacaoService;
 
     @InjectMocks
     private VotoService votoService;
@@ -47,6 +48,7 @@ class VotoServiceTest {
     private VotoEscolhido votoEscolhido;
     private Associado associado;
     private SessaoVotacao sessaoVotacao;
+    private SessaoVotacaoDTO sessaoVotacaoDTO;
 
     @BeforeEach
     void setUp() {
@@ -56,6 +58,12 @@ class VotoServiceTest {
         votoEscolhido = VotoEscolhido.SIM;
         associado = Associado.builder().id(associadoId).cpf(cpf).build();
         sessaoVotacao = SessaoVotacao.builder().id(sessaoVotacaoId).build();
+
+        sessaoVotacaoDTO = SessaoVotacaoDTO.builder()
+                .id(sessaoVotacaoId)
+                .inicio(LocalDateTime.now())
+                .fim(LocalDateTime.now().plusMinutes(1))
+                .encerrada(false).build();
     }
 
     @Test
@@ -63,7 +71,7 @@ class VotoServiceTest {
         Voto novoVoto = Voto.builder().sessaoVotacao(sessaoVotacao).associado(associado).votoEscolhido(votoEscolhido).build();
 
         when(associadoRepository.findById(associadoId)).thenReturn(Optional.of(associado));
-        when(sessaoVotacaoRepository.findById(sessaoVotacaoId)).thenReturn(Optional.of(sessaoVotacao));
+        when(sessaoVotacaoService.obterSessaoPorId(sessaoVotacaoId)).thenReturn(sessaoVotacaoDTO);
         when(votoRepository.save(any(Voto.class))).thenReturn(novoVoto);
         doNothing().when(cpfValidationService).validarCpfNoServicoExterno(associado.getCpf());
 
@@ -75,7 +83,7 @@ class VotoServiceTest {
         assertEquals(votoEscolhido, result.votoEscolhido());
 
         verify(associadoRepository).findById(associadoId);
-        verify(sessaoVotacaoRepository).findById(sessaoVotacaoId);
+        verify(sessaoVotacaoService).obterSessaoPorId(sessaoVotacaoId);
         verify(votoRepository).save(any(Voto.class));
         verify(cpfValidationService).validarCpfNoServicoExterno(associado.getCpf());
     }
@@ -87,36 +95,35 @@ class VotoServiceTest {
         assertThrowsAssociadoNotFoundException();
 
         verify(associadoRepository).findById(associadoId);
-        verifyNoInteractions(sessaoVotacaoRepository, votoRepository, cpfValidationService);
+        verifyNoInteractions(votoRepository, cpfValidationService);
     }
 
     @Test
     void deveLancarExcecaoQuandoSessaoNaoForEncontrada() {
         when(associadoRepository.findById(associadoId)).thenReturn(Optional.of(associado));
-        when(sessaoVotacaoRepository.findById(sessaoVotacaoId)).thenReturn(Optional.empty());
+        when(sessaoVotacaoService.obterSessaoPorId(sessaoVotacaoId)).thenThrow(new SessaoVotacaoNotFoundException("Sessão de votação não encontrada com ID: " + sessaoVotacaoId));
         doNothing().when(cpfValidationService).validarCpfNoServicoExterno(associado.getCpf());
 
         assertThrowsSessaoVotacaoNotFoundException();
 
         verify(associadoRepository).findById(associadoId);
-        verify(sessaoVotacaoRepository).findById(sessaoVotacaoId);
+        verify(sessaoVotacaoService).obterSessaoPorId(sessaoVotacaoId);
         verifyNoInteractions(votoRepository);
         verify(cpfValidationService).validarCpfNoServicoExterno(associado.getCpf());
     }
 
     @Test
     void deveLancarExcecaoQuandoSessaoEstiverEncerrada() {
-        sessaoVotacao.setEncerrada(true);
+        sessaoVotacaoDTO = SessaoVotacaoDTO.builder().id(sessaoVotacaoId).encerrada(true).build();
 
         when(associadoRepository.findById(associadoId)).thenReturn(Optional.of(associado));
-        when(sessaoVotacaoRepository.findById(sessaoVotacaoId)).thenReturn(Optional.of(sessaoVotacao));
+        when(sessaoVotacaoService.obterSessaoPorId(sessaoVotacaoId)).thenReturn(sessaoVotacaoDTO);
         doNothing().when(cpfValidationService).validarCpfNoServicoExterno(associado.getCpf());
 
         assertThrowsSessaoVotacaoEncerradaException();
 
         verify(associadoRepository).findById(associadoId);
-        verify(sessaoVotacaoRepository).findById(sessaoVotacaoId);
-        verify(votoRepository).existsBySessaoVotacaoAndAssociado(sessaoVotacao, associado);
+        verify(sessaoVotacaoService).obterSessaoPorId(sessaoVotacaoId);
         verify(cpfValidationService).validarCpfNoServicoExterno(associado.getCpf());
     }
 
@@ -150,15 +157,15 @@ class VotoServiceTest {
     @Test
     void deveLancarExcecaoQuandoVotoDuplicado() {
         when(associadoRepository.findById(associadoId)).thenReturn(Optional.of(associado));
-        when(sessaoVotacaoRepository.findById(sessaoVotacaoId)).thenReturn(Optional.of(sessaoVotacao));
-        when(votoRepository.existsBySessaoVotacaoAndAssociado(sessaoVotacao, associado)).thenReturn(true);
+        when(sessaoVotacaoService.obterSessaoPorId(sessaoVotacaoId)).thenReturn(sessaoVotacaoDTO);
+        when(votoRepository.existsBySessaoVotacaoAndAssociado(any(SessaoVotacao.class), eq(associado))).thenReturn(true);
         doNothing().when(cpfValidationService).validarCpfNoServicoExterno(associado.getCpf());
 
         assertThrowsVotoDuplicadoException();
 
         verify(associadoRepository).findById(associadoId);
-        verify(sessaoVotacaoRepository).findById(sessaoVotacaoId);
-        verify(votoRepository).existsBySessaoVotacaoAndAssociado(sessaoVotacao, associado);
+        verify(sessaoVotacaoService).obterSessaoPorId(sessaoVotacaoId);
+        verify(votoRepository).existsBySessaoVotacaoAndAssociado(any(SessaoVotacao.class), eq(associado));
         verifyNoMoreInteractions(votoRepository);
         verify(cpfValidationService).validarCpfNoServicoExterno(associado.getCpf());
     }
