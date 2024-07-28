@@ -19,6 +19,8 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import static com.example.cooperativa.util.CacheAlias.SESSOES;
+
 @Service
 public class SessaoVotacaoService {
 
@@ -34,7 +36,7 @@ public class SessaoVotacaoService {
         this.schedulerUpdateTime = schedulerUpdateTime;
     }
 
-    @CacheEvict(value = "sessoes", allEntries = true)
+    @CacheEvict(value = SESSOES, allEntries = true)
     public SessaoVotacaoDTO criarSessao(final Long pautaId) {
         final LocalDateTime inicio = LocalDateTime.now();
         final LocalDateTime fim = inicio.plus(schedulerUpdateTime, ChronoUnit.MILLIS);
@@ -52,12 +54,7 @@ public class SessaoVotacaoService {
         return getSessaoVotacaoDTO(sessaoVotacao);
     }
 
-    private Pauta getPauta(final Long pautaId) {
-        return pautaRepository.findById(pautaId)
-                .orElseThrow(() -> new PautaNotFoundException("Pauta não encontrada com ID: " + pautaId));
-    }
-
-    @Cacheable("sessoes")
+    @Cacheable(SESSOES)
     public List<SessaoVotacaoDTO> listarSessoes() {
         final List<SessaoVotacao> sessoes = sessaoVotacaoRepository.findAll();
         return sessoes.stream()
@@ -65,14 +62,14 @@ public class SessaoVotacaoService {
                 .toList();
     }
 
-    @Cacheable(value = "sessoes", key = "#id")
+    @Cacheable(value = SESSOES, key = "#id")
     public SessaoVotacaoDTO obterSessaoPorId(final Long id) {
         return sessaoVotacaoRepository.findById(id)
                 .map(this::getSessaoVotacaoDTO)
                 .orElseThrow(getSessaoNaoEncontradaException(id));
     }
 
-    @CacheEvict(value = "sessoes", key = "#sessaoVotacaoId")
+    @CacheEvict(value = SESSOES, key = "#sessaoVotacaoId")
     public void encerrarSessaoSeExpirada(final Long sessaoVotacaoId) {
         final Optional<SessaoVotacao> sessaoVotacaoOpt = sessaoVotacaoRepository.findById(sessaoVotacaoId);
         final Consumer<SessaoVotacao> consumer = encerrarESalvarSessao();
@@ -91,6 +88,11 @@ public class SessaoVotacaoService {
 
     private Supplier<SessaoVotacaoNotFoundException> getSessaoNaoEncontradaException(final Long id) {
         return () -> new SessaoVotacaoNotFoundException("Sessão de votação não encontrada com ID: " + id);
+    }
+
+    private Pauta getPauta(final Long pautaId) {
+        return pautaRepository.findById(pautaId)
+                .orElseThrow(() -> new PautaNotFoundException("Pauta não encontrada com ID: " + pautaId));
     }
 
     private SessaoVotacaoDTO getSessaoVotacaoDTO(final SessaoVotacao sessaoVotacao) {

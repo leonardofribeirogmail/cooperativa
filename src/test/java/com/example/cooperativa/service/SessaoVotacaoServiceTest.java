@@ -7,12 +7,17 @@ import com.example.cooperativa.model.Pauta;
 import com.example.cooperativa.model.SessaoVotacao;
 import com.example.cooperativa.repository.PautaRepository;
 import com.example.cooperativa.repository.SessaoVotacaoRepository;
+import com.example.cooperativa.util.CacheAlias;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
@@ -25,23 +30,30 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
+@SpringBootTest
+@ActiveProfiles("test")
+@ExtendWith(SpringExtension.class)
 class SessaoVotacaoServiceTest {
 
-    @Mock
+    @MockBean
     private SessaoVotacaoRepository sessaoVotacaoRepository;
 
-    @Mock
+    @MockBean
     private PautaRepository pautaRepository;
 
-    @InjectMocks
+    @Autowired
     private SessaoVotacaoService sessaoVotacaoService;
+
+    @Autowired
+    private CacheManager cacheManager;
 
     private final long schedulerUpdateRate = 60000;
 
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(sessaoVotacaoService, "schedulerUpdateTime", schedulerUpdateRate);
+        final Cache cache = cacheManager.getCache(CacheAlias.SESSOES);
+        Optional.ofNullable(cache).ifPresent(Cache::clear);
     }
 
     @Test
@@ -99,6 +111,24 @@ class SessaoVotacaoServiceTest {
     }
 
     @Test
+    void deveListarSessoesComCache() {
+        final SessaoVotacao sessao1 = criarSessao(1L, LocalDateTime.now().minusDays(1), LocalDateTime.now(), false);
+        final SessaoVotacao sessao2 = criarSessao(2L, LocalDateTime.now().minusDays(2), LocalDateTime.now().minusDays(1), true);
+
+        when(sessaoVotacaoRepository.findAll()).thenReturn(Arrays.asList(sessao1, sessao2));
+
+        // Primeira chamada, deve buscar do repositório
+        final List<SessaoVotacaoDTO> sessoes1 = sessaoVotacaoService.listarSessoes();
+        assertEquals(2, sessoes1.size());
+        verify(sessaoVotacaoRepository, times(1)).findAll();
+
+        // Segunda chamada, deve buscar do cache
+        final List<SessaoVotacaoDTO> sessoes2 = sessaoVotacaoService.listarSessoes();
+        assertEquals(2, sessoes2.size());
+        verify(sessaoVotacaoRepository, times(1)).findAll();
+    }
+
+    @Test
     void deveObterSessaoPorId() {
         final SessaoVotacao sessao = criarSessao(1L, LocalDateTime.now().minusDays(1), LocalDateTime.now(), false);
 
@@ -109,6 +139,25 @@ class SessaoVotacaoServiceTest {
         assertNotNull(result);
         assertSessaoVotacaoDTO(sessao, result);
 
+        verify(sessaoVotacaoRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    void deveObterSessaoPorIdComCache() {
+        final SessaoVotacao sessao = criarSessao(1L, LocalDateTime.now().minusDays(1), LocalDateTime.now(), false);
+
+        when(sessaoVotacaoRepository.findById(1L)).thenReturn(Optional.of(sessao));
+
+        // Primeira chamada, deve buscar do repositório
+        final SessaoVotacaoDTO result1 = sessaoVotacaoService.obterSessaoPorId(1L);
+        assertNotNull(result1);
+        assertSessaoVotacaoDTO(sessao, result1);
+        verify(sessaoVotacaoRepository, times(1)).findById(1L);
+
+        // Segunda chamada, deve buscar do cache
+        final SessaoVotacaoDTO result2 = sessaoVotacaoService.obterSessaoPorId(1L);
+        assertNotNull(result2);
+        assertSessaoVotacaoDTO(sessao, result2);
         verify(sessaoVotacaoRepository, times(1)).findById(1L);
     }
 
@@ -137,7 +186,6 @@ class SessaoVotacaoServiceTest {
     @Test
     void naoDeveEncerrarSessaoSeNaoExpirada() {
         final SessaoVotacao sessaoVotacao = criarSessao(1L, LocalDateTime.now().minusMinutes(1), LocalDateTime.now().plusMinutes(1), false);
-
         when(sessaoVotacaoRepository.findById(1L)).thenReturn(Optional.of(sessaoVotacao));
 
         sessaoVotacaoService.encerrarSessaoSeExpirada(1L);
@@ -145,6 +193,28 @@ class SessaoVotacaoServiceTest {
         assertFalse(sessaoVotacao.isEncerrada());
         verify(sessaoVotacaoRepository).findById(1L);
         verify(sessaoVotacaoRepository, never()).save(any(SessaoVotacao.class));
+    }
+
+    @Test
+    void deveEvictarCacheAoCriarSessao() {
+        final Pauta pauta = Pauta.builder()
+                .id(1L)
+                .nome("Pauta 1")
+                .descricao("Descrição Pauta 1")
+                .build();
+
+        final LocalDateTime inicio = LocalDateTime.now();
+        final LocalDateTime fim = inicio.plus(schedulerUpdateRate, ChronoUnit.MILLIS);
+        final SessaoVotacao sessaoVotacao = criarSessao(1L, inicio, fim, false);
+
+        when(pautaRepository.findById(1L)).thenReturn(Optional.of(pauta));
+        when(sessaoVotacaoRepository.save(any(SessaoVotacao.class))).thenReturn(sessaoVotacao);
+
+        sessaoVotacaoService.criarSessao(1L);
+
+        Cache cache = cacheManager.getCache(CacheAlias.SESSOES);
+        assertNotNull(cache);
+        assertNull(cache.get(1L));
     }
 
     private SessaoVotacao criarSessao(final Long id,
