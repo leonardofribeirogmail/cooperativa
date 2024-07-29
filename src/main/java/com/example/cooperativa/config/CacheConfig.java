@@ -8,8 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 
-import static com.example.cooperativa.util.CacheAlias.ASSOCIADOS;
-import static com.example.cooperativa.util.CacheAlias.SESSOES;
+import static com.example.cooperativa.util.CacheAlias.*;
 
 @Configuration
 @EnableCaching
@@ -22,6 +21,6 @@ public class CacheConfig {
 
     @Bean
     public CacheManager cacheManager() {
-        return new ConcurrentMapCacheManager(SESSOES, ASSOCIADOS);
+        return new ConcurrentMapCacheManager(SESSOES, ASSOCIADOS, PAUTAS);
     }
 }
