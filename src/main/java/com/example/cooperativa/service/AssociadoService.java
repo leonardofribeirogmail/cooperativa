@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
+import static com.example.cooperativa.util.CacheAlias.ASSOCIADOS;
+
 @Service
 @RequiredArgsConstructor
 public class AssociadoService {
@@ -21,7 +23,7 @@ public class AssociadoService {
     private final CPFUtil cpfUtil;
     private final AssociadoRepository associadoRepository;
 
-    @CacheEvict(value = "associados", allEntries = true)
+    @CacheEvict(value = ASSOCIADOS, allEntries = true)
     public AssociadoResponseDTO criarAssociado(final CriarAssociadoDTO criarAssociadoDTO) {
         if (!cpfUtil.isCpfValido(criarAssociadoDTO.cpf())) {
             throw new IllegalArgumentException("CPF inválido: " + criarAssociadoDTO.cpf());
@@ -39,7 +41,7 @@ public class AssociadoService {
                 .build();
     }
 
-    @Cacheable("associados")
+    @Cacheable(ASSOCIADOS)
     public List<AssociadoResponseDTO> listarAssociados() {
         return associadoRepository.findAll().stream()
                 .map(associado -> AssociadoResponseDTO.builder()
@@ -49,7 +51,7 @@ public class AssociadoService {
                 .toList();
     }
 
-    private Associado getAssociadoSalvo(Associado associado) {
+    private Associado getAssociadoSalvo(final Associado associado) {
         return Optional.of(associado)
                 .filter(ass -> !associadoRepository.existsByCpf(ass.getCpf()))
                 .map(associadoRepository::save)

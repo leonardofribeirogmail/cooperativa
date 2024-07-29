@@ -7,4 +7,5 @@ public class CacheAlias {
     }
 
     public static final String SESSOES = "sessoes";
+    public static final String ASSOCIADOS = "associados";
 }
