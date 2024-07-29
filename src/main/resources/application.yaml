@@ -24,6 +24,8 @@ spring:
     type: redis
     redis:
       time-to-live: 600000
+    jcache:
+      config: classpath:ehcache.xml
   data:
     redis:
       host: redis
@@ -43,6 +45,7 @@ logging:
   level:
     root: INFO
     com.example.cooperativa: INFO
+    org.ehcache: INFO
 
 cors:
   allowedOrigins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
