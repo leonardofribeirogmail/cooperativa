@@ -6,7 +6,20 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    database-platform: org.hibernate.dialect.MySQLDialect
+    properties:
+      hibernate:
+        cache:
+          use_second_level_cache: true
+          region_prefix: jcache
+          provider_class: org.ehcache.jsr107.EhcacheCachingProvider
+        javax:
+          cache:
+            missing_cache_strategy: create
+        transaction:
+          jta:
+            platform: org.hibernate.service.jta.platform.internal.AtomikosJtaPlatform
+
+    open-in-view: false
   cache:
     type: redis
     redis:
