@@ -1,0 +1,50 @@
+<ehcache:config xmlns:ehcache="http://www.ehcache.org/v3"
+                xmlns:jcache="http://www.ehcache.org/v3/jsr107"
+                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                xsi:schemaLocation="http://www.ehcache.org/v3 http://www.ehcache.org/schema/ehcache-core-3.0.xsd
+                                    http://www.ehcache.org/v3/jsr107 http://www.ehcache.org/schema/ehcache-107-ext-3.0.xsd">
+
+    <!-- Serviços opcionais gerenciados pelo CacheManager -->
+    <ehcache:service>
+        <jcache:defaults>
+            <jcache:cache name="invoices" template="myDefaultTemplate"/>
+        </jcache:defaults>
+    </ehcache:service>
+
+    <!-- Cache para productCache -->
+    <ehcache:cache alias="productCache">
+        <ehcache:key-type copier="org.ehcache.impl.copy.SerializingCopier">java.lang.Long</ehcache:key-type>
+        <ehcache:value-type copier="org.ehcache.impl.copy.SerializingCopier">com.pany.domain.Product</ehcache:value-type>
+        <ehcache:expiry>
+            <ehcache:tti unit="minutes">2</ehcache:tti>
+        </ehcache:expiry>
+        <ehcache:eviction-advisor>com.pany.ehcache.MyEvictionAdvisor</ehcache:eviction-advisor>
+        <ehcache:loader-writer>
+            <ehcache:class>com.pany.ehcache.integration.ProductCacheLoaderWriter</ehcache:class>
+        </ehcache:loader-writer>
+        <ehcache:resources>
+            <ehcache:heap unit="entries">200</ehcache:heap>
+            <ehcache:offheap unit="MB">10</ehcache:offheap>
+        </ehcache:resources>
+    </ehcache:cache>
+
+    <!-- Template padrão para cache -->
+    <ehcache:cache-template name="myDefaultTemplate">
+        <ehcache:expiry>
+            <ehcache:none/>
+        </ehcache:expiry>
+        <ehcache:resources>
+            <ehcache:heap unit="entries">200</ehcache:heap>
+        </ehcache:resources>
+    </ehcache:cache-template>
+
+    <!-- Cache para customerCache -->
+    <ehcache:cache alias="customerCache" uses-template="myDefaultTemplate">
+        <ehcache:key-type>java.lang.Long</ehcache:key-type>
+        <ehcache:value-type>com.pany.domain.Customer</ehcache:value-type>
+        <ehcache:resources>
+            <ehcache:heap unit="entries">200</ehcache:heap>
+        </ehcache:resources>
+    </ehcache:cache>
+
+</ehcache:config>

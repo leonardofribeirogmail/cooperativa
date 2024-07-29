@@ -33,7 +33,8 @@ public class PautaService {
 
     public Optional<PautaDTO> obterPautaPorId(final Long id) {
         return pautaRepository.findById(id)
-                .map(this::getPautaDTO);
+                .map(this::getPautaDTO)
+                .or(Optional::empty);
     }
 
     private PautaDTO getPautaDTO(final Pauta pauta) {

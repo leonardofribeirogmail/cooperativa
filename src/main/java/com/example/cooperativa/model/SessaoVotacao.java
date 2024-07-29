@@ -37,6 +37,6 @@ public class SessaoVotacao {
     @Column(nullable = false)
     private boolean encerrada;
 
-    @OneToMany(mappedBy = "sessaoVotacao", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "sessaoVotacao", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Voto> votos;
 }
