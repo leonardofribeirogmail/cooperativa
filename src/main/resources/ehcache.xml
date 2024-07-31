@@ -9,10 +9,10 @@
             <jcache:cache name="associados" template="defaultTemplate"/>
             <jcache:cache name="sessoes" template="defaultTemplate"/>
             <jcache:cache name="pautas" template="defaultTemplate"/>
+            <jcache:cache name="cpfValidation" template="defaultTemplate"/>
         </jcache:defaults>
     </ehcache:service>
 
-    <!-- Cache para associados -->
     <ehcache:cache alias="associados" uses-template="defaultTemplate">
         <ehcache:key-type>java.lang.String</ehcache:key-type>
         <ehcache:value-type>java.lang.Object</ehcache:value-type>
@@ -25,7 +25,6 @@
         </ehcache:resources>
     </ehcache:cache>
 
-    <!-- Cache para sessoes -->
     <ehcache:cache alias="sessoes" uses-template="defaultTemplate">
         <ehcache:key-type>java.lang.String</ehcache:key-type>
         <ehcache:value-type>java.lang.Object</ehcache:value-type>
@@ -50,7 +49,18 @@
         </ehcache:resources>
     </ehcache:cache>
 
-    <!-- Template padrão para cache -->
+    <ehcache:cache alias="cpfValidation" uses-template="defaultTemplate">
+        <ehcache:key-type>java.lang.String</ehcache:key-type>
+        <ehcache:value-type>java.lang.Object</ehcache:value-type>
+        <ehcache:expiry>
+            <ehcache:tti unit="minutes">30</ehcache:tti>
+        </ehcache:expiry>
+        <ehcache:resources>
+            <ehcache:heap>100</ehcache:heap>
+            <ehcache:offheap unit="MB">5</ehcache:offheap>
+        </ehcache:resources>
+    </ehcache:cache>
+
     <ehcache:cache-template name="defaultTemplate">
         <ehcache:expiry>
             <ehcache:none/>

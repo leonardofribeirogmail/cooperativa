@@ -1,6 +1,5 @@
 package com.example.cooperativa.service;
 
-import com.example.cooperativa.dto.SessaoVotacaoDTO;
 import com.example.cooperativa.dto.VotoDTO;
 import com.example.cooperativa.enums.VotoEscolhido;
 import com.example.cooperativa.exception.AssociadoNotFoundException;
@@ -12,9 +11,13 @@ import com.example.cooperativa.model.Voto;
 import com.example.cooperativa.repository.AssociadoRepository;
 import com.example.cooperativa.repository.VotoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import java.util.function.Supplier;
+
+import static com.example.cooperativa.util.CacheAlias.RESULTADO_VOTACAO;
+import static com.example.cooperativa.util.CacheAlias.SESSOES;
 
 @Service
 @RequiredArgsConstructor
@@ -25,20 +28,20 @@ public class VotoService {
     private final CPFValidationService cpfValidationService;
     private final SessaoVotacaoService sessaoVotacaoService;
 
+    @CacheEvict(value = {SESSOES, RESULTADO_VOTACAO}, key = "#sessaoVotacaoId")
     public VotoDTO registrarVoto(final Long sessaoVotacaoId,
                                  final Long associadoId,
                                  final VotoEscolhido votoEscolhido) {
 
-        sessaoVotacaoService.encerrarSessaoSeExpirada(sessaoVotacaoId);
+        final SessaoVotacao sessaoVotacao = sessaoVotacaoService.encerrarSessaoSeExpirada(sessaoVotacaoId);
+
+        validarTempoDeSessao(sessaoVotacao);
 
         final Associado associado = getAssociado(associadoId);
 
         cpfValidationService.validarCpfNoServicoExterno(associado.getCpf());
 
-        final SessaoVotacao sessaoVotacao = getSessaoVotacao(sessaoVotacaoId);
-
         validarVotoDuplicado(associado, sessaoVotacao);
-        validarTempoDeSessao(sessaoVotacaoId, sessaoVotacao);
 
         final Voto novoVoto = Voto.builder()
                 .sessaoVotacao(sessaoVotacao)
@@ -65,16 +68,6 @@ public class VotoService {
         return () -> new AssociadoNotFoundException("Associado não encontrado com ID: " + associadoId);
     }
 
-    private SessaoVotacao getSessaoVotacao(final Long sessaoVotacaoId) {
-        final SessaoVotacaoDTO sessaoVotacaoDTO = sessaoVotacaoService.obterSessaoPorId(sessaoVotacaoId);
-        return SessaoVotacao.builder()
-                .id(sessaoVotacaoDTO.id())
-                .inicio(sessaoVotacaoDTO.inicio())
-                .fim(sessaoVotacaoDTO.fim())
-                .encerrada(sessaoVotacaoDTO.encerrada())
-                .build();
-    }
-
     private void validarVotoDuplicado(final Associado associado, final SessaoVotacao sessaoVotacao) {
         final boolean votoExistente = votoRepository.existsBySessaoVotacaoAndAssociado(sessaoVotacao, associado);
         if (votoExistente) {
@@ -82,9 +75,9 @@ public class VotoService {
         }
     }
 
-    private void validarTempoDeSessao(final Long sessaoVotacaoId, final SessaoVotacao sessaoVotacao) {
+    private void validarTempoDeSessao(final SessaoVotacao sessaoVotacao) {
         if (sessaoVotacao.isEncerrada()) {
-            throw new SessaoVotacaoEncerradaException("Sessão de votação encerrada com ID: " + sessaoVotacaoId);
+            throw new SessaoVotacaoEncerradaException("Sessão de votação encerrada com ID: " + sessaoVotacao.getId());
         }
     }
 }

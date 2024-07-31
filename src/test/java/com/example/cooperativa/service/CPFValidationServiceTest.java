@@ -6,72 +6,94 @@ import com.example.cooperativa.exception.InvalidCPFException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import static com.example.cooperativa.util.CacheAlias.CPF_VALIDATION;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
+@SpringBootTest
+@ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
 class CPFValidationServiceTest {
 
-    @Mock
+    @MockBean
     private RestTemplate restTemplate;
 
-    @InjectMocks
+    @Autowired
     private CPFValidationService cpfValidationService;
+
+    @Autowired
+    private CacheManager cacheManager;
+
+    private static final String VALID_CPF = "12345678900";
+    private static final String INVALID_CPF = "12345678909";
 
     @BeforeEach
     void setUp() {
-        cpfValidationService = new CPFValidationService(restTemplate, "http://localhost/{cpf}");
+        final Cache cache = cacheManager.getCache(CPF_VALIDATION);
+        if (cache != null) {
+            cache.clear();
+        }
     }
 
     @Test
     void deveLancarExcecaoQuandoCpfForInvalido() {
-        final String invalidCpf = "12345678909";
         final CpfValidationResponseDTO response = new CpfValidationResponseDTO("UNABLE_TO_VOTE");
 
         when(restTemplate.getForObject(anyString(), eq(CpfValidationResponseDTO.class))).thenReturn(response);
 
-        assertThrows(InvalidCPFException.class, () -> cpfValidationService.validarCpfNoServicoExterno(invalidCpf));
+        assertThrows(InvalidCPFException.class, () -> cpfValidationService.validarCpfNoServicoExterno(INVALID_CPF));
     }
 
     @Test
     void deveLancarExcecaoQuandoTimeout() {
-        final String cpf = "12345678909";
-
         doThrow(new ResourceAccessException("Timeout"))
                 .when(restTemplate)
                 .getForObject(anyString(), eq(CpfValidationResponseDTO.class));
 
-        assertThrows(CpfValidationException.class, () -> cpfValidationService.validarCpfNoServicoExterno(cpf));
+        assertThrows(CpfValidationException.class, () -> cpfValidationService.validarCpfNoServicoExterno(INVALID_CPF));
     }
 
     @Test
     void deveLancarExcecaoGenerica() {
-        final String cpf = "12345678909";
-
         doThrow(new RuntimeException("Erro geral"))
                 .when(restTemplate)
                 .getForObject(anyString(), eq(CpfValidationResponseDTO.class));
 
-        assertThrows(CpfValidationException.class, () -> cpfValidationService.validarCpfNoServicoExterno(cpf));
+        assertThrows(CpfValidationException.class, () -> cpfValidationService.validarCpfNoServicoExterno(INVALID_CPF));
     }
 
     @Test
     void deveValidarCpfComSucesso() {
-        final String validCpf = "12345678900";
         final CpfValidationResponseDTO response = new CpfValidationResponseDTO("ABLE_TO_VOTE");
 
         when(restTemplate.getForObject(anyString(), eq(CpfValidationResponseDTO.class))).thenReturn(response);
 
-        assertDoesNotThrow(() -> cpfValidationService.validarCpfNoServicoExterno(validCpf));
+        assertDoesNotThrow(() -> cpfValidationService.validarCpfNoServicoExterno(VALID_CPF));
+    }
+
+    @Test
+    void deveUtilizarCacheParaValidarCpf() {
+        final CpfValidationResponseDTO response = new CpfValidationResponseDTO("ABLE_TO_VOTE");
+
+        when(restTemplate.getForObject(anyString(), eq(CpfValidationResponseDTO.class))).thenReturn(response);
+
+        assertDoesNotThrow(() -> cpfValidationService.validarCpfNoServicoExterno(VALID_CPF));
+        verify(restTemplate, times(1)).getForObject(anyString(), eq(CpfValidationResponseDTO.class));
+
+        assertDoesNotThrow(() -> cpfValidationService.validarCpfNoServicoExterno(VALID_CPF));
+        verify(restTemplate, times(1)).getForObject(anyString(), eq(CpfValidationResponseDTO.class));
     }
 }

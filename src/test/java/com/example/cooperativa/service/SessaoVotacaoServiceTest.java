@@ -22,7 +22,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -58,12 +57,7 @@ class SessaoVotacaoServiceTest {
 
     @Test
     void deveCriarSessao() {
-        final Pauta pauta = Pauta.builder()
-                .id(1L)
-                .nome("Pauta 1")
-                .descricao("Descrição Pauta 1")
-                .build();
-
+        final Pauta pauta = criarPauta();
         final LocalDateTime inicio = LocalDateTime.now();
         final LocalDateTime fim = inicio.plus(schedulerUpdateRate, ChronoUnit.MILLIS);
         final SessaoVotacao sessaoVotacao = criarSessao(1L, inicio, fim, false);
@@ -73,15 +67,10 @@ class SessaoVotacaoServiceTest {
 
         final SessaoVotacaoDTO resultado = sessaoVotacaoService.criarSessao(1L);
 
-        assertNotNull(resultado);
-        assertEquals(sessaoVotacao.getId(), resultado.id());
-        assertEquals(sessaoVotacao.getPauta().getId(), resultado.pautaId());
-        assertEquals(sessaoVotacao.isEncerrada(), resultado.encerrada());
-        assertEquals(sessaoVotacao.getInicio(), resultado.inicio());
-        assertEquals(sessaoVotacao.getFim(), resultado.fim());
+        assertSessaoVotacaoDTO(sessaoVotacao, resultado);
 
-        verify(pautaRepository, times(1)).findById(1L);
-        verify(sessaoVotacaoRepository, times(1)).save(any(SessaoVotacao.class));
+        verify(pautaRepository).findById(1L);
+        verify(sessaoVotacaoRepository).save(any(SessaoVotacao.class));
     }
 
     @Test
@@ -90,7 +79,7 @@ class SessaoVotacaoServiceTest {
 
         assertThrows(PautaNotFoundException.class, () -> sessaoVotacaoService.criarSessao(1L));
 
-        verify(pautaRepository, times(1)).findById(1L);
+        verify(pautaRepository).findById(1L);
         verifyNoMoreInteractions(sessaoVotacaoRepository);
     }
 
@@ -99,7 +88,7 @@ class SessaoVotacaoServiceTest {
         final SessaoVotacao sessao1 = criarSessao(1L, LocalDateTime.now().minusDays(1), LocalDateTime.now(), false);
         final SessaoVotacao sessao2 = criarSessao(2L, LocalDateTime.now().minusDays(2), LocalDateTime.now().minusDays(1), true);
 
-        when(sessaoVotacaoRepository.findAll()).thenReturn(Arrays.asList(sessao1, sessao2));
+        when(sessaoVotacaoRepository.findAll()).thenReturn(List.of(sessao1, sessao2));
 
         final List<SessaoVotacaoDTO> sessoes = sessaoVotacaoService.listarSessoes();
 
@@ -107,7 +96,7 @@ class SessaoVotacaoServiceTest {
         assertSessaoVotacaoDTO(sessao1, sessoes.get(0));
         assertSessaoVotacaoDTO(sessao2, sessoes.get(1));
 
-        verify(sessaoVotacaoRepository, times(1)).findAll();
+        verify(sessaoVotacaoRepository).findAll();
     }
 
     @Test
@@ -115,17 +104,15 @@ class SessaoVotacaoServiceTest {
         final SessaoVotacao sessao1 = criarSessao(1L, LocalDateTime.now().minusDays(1), LocalDateTime.now(), false);
         final SessaoVotacao sessao2 = criarSessao(2L, LocalDateTime.now().minusDays(2), LocalDateTime.now().minusDays(1), true);
 
-        when(sessaoVotacaoRepository.findAll()).thenReturn(Arrays.asList(sessao1, sessao2));
+        when(sessaoVotacaoRepository.findAll()).thenReturn(List.of(sessao1, sessao2));
 
-        // Primeira chamada, deve buscar do repositório
         final List<SessaoVotacaoDTO> sessoes1 = sessaoVotacaoService.listarSessoes();
         assertEquals(2, sessoes1.size());
-        verify(sessaoVotacaoRepository, times(1)).findAll();
+        verify(sessaoVotacaoRepository).findAll();
 
-        // Segunda chamada, deve buscar do cache
         final List<SessaoVotacaoDTO> sessoes2 = sessaoVotacaoService.listarSessoes();
         assertEquals(2, sessoes2.size());
-        verify(sessaoVotacaoRepository, times(1)).findAll();
+        verify(sessaoVotacaoRepository).findAll();
     }
 
     @Test
@@ -139,7 +126,7 @@ class SessaoVotacaoServiceTest {
         assertNotNull(result);
         assertSessaoVotacaoDTO(sessao, result);
 
-        verify(sessaoVotacaoRepository, times(1)).findById(1L);
+        verify(sessaoVotacaoRepository).findById(1L);
     }
 
     @Test
@@ -148,17 +135,15 @@ class SessaoVotacaoServiceTest {
 
         when(sessaoVotacaoRepository.findById(1L)).thenReturn(Optional.of(sessao));
 
-        // Primeira chamada, deve buscar do repositório
         final SessaoVotacaoDTO result1 = sessaoVotacaoService.obterSessaoPorId(1L);
         assertNotNull(result1);
         assertSessaoVotacaoDTO(sessao, result1);
-        verify(sessaoVotacaoRepository, times(1)).findById(1L);
+        verify(sessaoVotacaoRepository).findById(1L);
 
-        // Segunda chamada, deve buscar do cache
         final SessaoVotacaoDTO result2 = sessaoVotacaoService.obterSessaoPorId(1L);
         assertNotNull(result2);
         assertSessaoVotacaoDTO(sessao, result2);
-        verify(sessaoVotacaoRepository, times(1)).findById(1L);
+        verify(sessaoVotacaoRepository).findById(1L);
     }
 
     @Test
@@ -167,7 +152,7 @@ class SessaoVotacaoServiceTest {
 
         assertThrows(SessaoVotacaoNotFoundException.class, () -> sessaoVotacaoService.obterSessaoPorId(1L));
 
-        verify(sessaoVotacaoRepository, times(1)).findById(1L);
+        verify(sessaoVotacaoRepository).findById(1L);
     }
 
     @Test
@@ -197,12 +182,7 @@ class SessaoVotacaoServiceTest {
 
     @Test
     void deveEvictarCacheAoCriarSessao() {
-        final Pauta pauta = Pauta.builder()
-                .id(1L)
-                .nome("Pauta 1")
-                .descricao("Descrição Pauta 1")
-                .build();
-
+        final Pauta pauta = criarPauta();
         final LocalDateTime inicio = LocalDateTime.now();
         final LocalDateTime fim = inicio.plus(schedulerUpdateRate, ChronoUnit.MILLIS);
         final SessaoVotacao sessaoVotacao = criarSessao(1L, inicio, fim, false);
@@ -212,7 +192,7 @@ class SessaoVotacaoServiceTest {
 
         sessaoVotacaoService.criarSessao(1L);
 
-        Cache cache = cacheManager.getCache(CacheAlias.SESSOES);
+        final Cache cache = cacheManager.getCache(CacheAlias.SESSOES);
         assertNotNull(cache);
         assertNull(cache.get(1L));
     }
@@ -221,17 +201,21 @@ class SessaoVotacaoServiceTest {
                                       final LocalDateTime inicio,
                                       final LocalDateTime fim,
                                       final boolean encerrada) {
-        final Pauta pauta = Pauta.builder()
-                .id(1L)
-                .nome("Pauta 1")
-                .descricao("Descrição Pauta 1")
-                .build();
+        final Pauta pauta = criarPauta();
         return SessaoVotacao.builder()
                 .id(id)
                 .inicio(inicio)
                 .fim(fim)
                 .encerrada(encerrada)
                 .pauta(pauta)
+                .build();
+    }
+
+    private Pauta criarPauta() {
+        return Pauta.builder()
+                .id(1L)
+                .nome("Pauta 1")
+                .descricao("Descrição Pauta 1")
                 .build();
     }
 
