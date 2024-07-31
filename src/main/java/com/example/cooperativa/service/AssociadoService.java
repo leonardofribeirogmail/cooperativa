@@ -25,9 +25,7 @@ public class AssociadoService {
 
     @CacheEvict(value = ASSOCIADOS, allEntries = true)
     public AssociadoResponseDTO criarAssociado(final CriarAssociadoDTO criarAssociadoDTO) {
-        if (!cpfUtil.isCpfValido(criarAssociadoDTO.cpf())) {
-            throw new IllegalArgumentException("CPF inválido: " + criarAssociadoDTO.cpf());
-        }
+        validarCpf(criarAssociadoDTO.cpf());
 
         final Associado associado = Associado.builder()
                 .cpf(criarAssociadoDTO.cpf())
@@ -49,6 +47,12 @@ public class AssociadoService {
                         .cpf(associado.getCpf())
                         .build())
                 .toList();
+    }
+
+    private void validarCpf(final String cpf) {
+        if (!cpfUtil.isCpfValido(cpf)) {
+            throw new IllegalArgumentException("CPF inválido: "+cpf);
+        }
     }
 
     private Associado getAssociadoSalvo(final Associado associado) {

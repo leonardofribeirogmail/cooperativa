@@ -1,5 +1,6 @@
 package com.example.cooperativa.config;
 
+import com.example.cooperativa.util.CacheAlias;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
@@ -7,8 +8,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
-
-import static com.example.cooperativa.util.CacheAlias.*;
 
 @Configuration
 @EnableCaching
@@ -21,6 +20,6 @@ public class CacheConfig {
 
     @Bean
     public CacheManager cacheManager() {
-        return new ConcurrentMapCacheManager(SESSOES, ASSOCIADOS, PAUTAS);
+        return new ConcurrentMapCacheManager(CacheAlias.getAliases());
     }
 }

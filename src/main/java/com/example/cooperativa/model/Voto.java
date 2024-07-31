@@ -7,6 +7,7 @@ import lombok.*;
 
 import static jakarta.persistence.GenerationType.IDENTITY;
 
+@Setter
 @Getter
 @Builder
 @AllArgsConstructor

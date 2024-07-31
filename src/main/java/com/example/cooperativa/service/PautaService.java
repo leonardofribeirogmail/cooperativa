@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static com.example.cooperativa.util.CacheAlias.PAUTAS;
+import static com.example.cooperativa.util.CacheAlias.SESSOES;
 
 @Service
 @RequiredArgsConstructor
@@ -20,7 +21,7 @@ public class PautaService {
 
     private final PautaRepository pautaRepository;
 
-    @CacheEvict(value = PAUTAS, allEntries = true)
+    @CacheEvict(value = {SESSOES, PAUTAS}, allEntries = true)
     public PautaDTO criarPauta(final CriarPautaDTO criarPautaDTO) {
         final Pauta pauta = Pauta.builder()
                 .nome(criarPautaDTO.nome())

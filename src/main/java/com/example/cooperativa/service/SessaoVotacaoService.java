@@ -15,10 +15,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Optional;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import static com.example.cooperativa.util.CacheAlias.RESULTADO_VOTACAO;
 import static com.example.cooperativa.util.CacheAlias.SESSOES;
 
 @Service
@@ -36,7 +35,7 @@ public class SessaoVotacaoService {
         this.schedulerUpdateTime = schedulerUpdateTime;
     }
 
-    @CacheEvict(value = SESSOES, allEntries = true)
+    @CacheEvict(value = {SESSOES, RESULTADO_VOTACAO}, allEntries = true)
     public SessaoVotacaoDTO criarSessao(final Long pautaId) {
         final LocalDateTime inicio = LocalDateTime.now();
         final LocalDateTime fim = inicio.plus(schedulerUpdateTime, ChronoUnit.MILLIS);
@@ -70,20 +69,15 @@ public class SessaoVotacaoService {
     }
 
     @CacheEvict(value = SESSOES, key = "#sessaoVotacaoId")
-    public void encerrarSessaoSeExpirada(final Long sessaoVotacaoId) {
-        final Optional<SessaoVotacao> sessaoVotacaoOpt = sessaoVotacaoRepository.findById(sessaoVotacaoId);
-        final Consumer<SessaoVotacao> consumer = encerrarESalvarSessao();
+    public SessaoVotacao encerrarSessaoSeExpirada(final Long sessaoVotacaoId) {
+        final SessaoVotacao sessaoVotacao = sessaoVotacaoRepository.findById(sessaoVotacaoId)
+                .orElseThrow(getSessaoNaoEncontradaException(sessaoVotacaoId));
 
-        sessaoVotacaoOpt.filter(sessaoVotacao -> !sessaoVotacao.isEncerrada())
-                .filter(sessaoVotacao -> sessaoVotacao.getFim().isBefore(LocalDateTime.now()))
-                .ifPresent(consumer);
-    }
+        if (sessaoEstaExpirada(sessaoVotacao)) {
+            return sessaoVotacaoRepository.save(sessaoVotacao);
+        }
 
-    private Consumer<SessaoVotacao> encerrarESalvarSessao() {
-        return sessaoVotacao -> {
-            sessaoVotacao.setEncerrada(true);
-            sessaoVotacaoRepository.save(sessaoVotacao);
-        };
+        return sessaoVotacao;
     }
 
     private Supplier<SessaoVotacaoNotFoundException> getSessaoNaoEncontradaException(final Long id) {
@@ -96,6 +90,8 @@ public class SessaoVotacaoService {
     }
 
     private SessaoVotacaoDTO getSessaoVotacaoDTO(final SessaoVotacao sessaoVotacao) {
+        sessaoEstaExpirada(sessaoVotacao);
+
         return SessaoVotacaoDTO.builder()
                 .id(sessaoVotacao.getId())
                 .encerrada(sessaoVotacao.isEncerrada())
@@ -103,5 +99,14 @@ public class SessaoVotacaoService {
                 .inicio(sessaoVotacao.getInicio())
                 .fim(sessaoVotacao.getFim())
                 .build();
+    }
+
+    private boolean sessaoEstaExpirada(final SessaoVotacao sessaoVotacao) {
+        if(!sessaoVotacao.isEncerrada() && sessaoVotacao.getFim().isBefore(LocalDateTime.now())) {
+            sessaoVotacao.setEncerrada(true);
+            return true;
+        }
+
+        return false;
     }
 }

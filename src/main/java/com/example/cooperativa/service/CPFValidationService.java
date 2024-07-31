@@ -5,12 +5,15 @@ import com.example.cooperativa.exception.CpfValidationException;
 import com.example.cooperativa.exception.InvalidCPFException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Optional;
 import java.util.function.Consumer;
+
+import static com.example.cooperativa.util.CacheAlias.CPF_VALIDATION;
 
 @Slf4j
 @Service
@@ -25,6 +28,7 @@ public class CPFValidationService {
         this.cpfValidatorUrl = cpfValidatorUrl;
     }
 
+    @Cacheable(value = CPF_VALIDATION, key = "#cpf")
     public void validarCpfNoServicoExterno(final String cpf) {
 
         try {

@@ -82,14 +82,12 @@ class PautaServiceTest {
 
         when(pautaRepository.findById(1L)).thenReturn(Optional.of(pauta));
 
-        // Primeira chamada, deve buscar do repositório
         final Optional<PautaDTO> result1 = pautaService.obterPautaPorId(1L);
         assertTrue(result1.isPresent());
         assertEquals(pauta.getNome(), result1.get().nome());
         assertEquals(pauta.getDescricao(), result1.get().descricao());
         verify(pautaRepository, times(1)).findById(1L);
 
-        // Segunda chamada, deve buscar do cache
         final Optional<PautaDTO> result2 = pautaService.obterPautaPorId(1L);
         assertTrue(result2.isPresent());
         assertEquals(pauta.getNome(), result2.get().nome());
@@ -132,12 +130,10 @@ class PautaServiceTest {
 
         when(pautaRepository.findAll()).thenReturn(Arrays.asList(pauta1, pauta2));
 
-        // Primeira chamada, deve buscar do repositório
         final List<PautaDTO> pautas1 = pautaService.listarPautas();
         assertEquals(2, pautas1.size());
         verify(pautaRepository, times(1)).findAll();
 
-        // Segunda chamada, deve buscar do cache
         final List<PautaDTO> pautas2 = pautaService.listarPautas();
         assertEquals(2, pautas2.size());
         verify(pautaRepository, times(1)).findAll();
