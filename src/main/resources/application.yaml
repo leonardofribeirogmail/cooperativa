@@ -56,7 +56,7 @@ cpf:
     url: ${CPF_VALIDATOR_URL:http://validator:8081/users/{cpf}} #https://user-info.herokuapp.com/users/{cpf}
 
 scheduler:
-  updateRate: ${SCHEDULER_UPDATE_RATE:600000}
+  updateRate: ${SCHEDULER_UPDATE_RATE:3600000}
 
 resttemplate:
   connect:
