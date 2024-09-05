@@ -13,6 +13,7 @@ import com.example.cooperativa.repository.VotoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.function.Supplier;
 
@@ -28,6 +29,7 @@ public class VotoService {
     private final CPFValidationService cpfValidationService;
     private final SessaoVotacaoService sessaoVotacaoService;
 
+    @Transactional
     @CacheEvict(value = {SESSOES, RESULTADO_VOTACAO}, key = "#sessaoVotacaoId")
     public VotoDTO registrarVoto(final Long sessaoVotacaoId,
                                  final Long associadoId,

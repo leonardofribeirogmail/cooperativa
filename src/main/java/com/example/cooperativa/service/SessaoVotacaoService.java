@@ -11,10 +11,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import static com.example.cooperativa.util.CacheAlias.RESULTADO_VOTACAO;
@@ -35,6 +37,7 @@ public class SessaoVotacaoService {
         this.schedulerUpdateTime = schedulerUpdateTime;
     }
 
+    @Transactional
     @CacheEvict(value = {SESSOES, RESULTADO_VOTACAO}, allEntries = true)
     public SessaoVotacaoDTO criarSessao(final Long pautaId) {
         final LocalDateTime inicio = LocalDateTime.now();
@@ -53,31 +56,49 @@ public class SessaoVotacaoService {
         return getSessaoVotacaoDTO(sessaoVotacao);
     }
 
+    @Transactional
     @Cacheable(SESSOES)
     public List<SessaoVotacaoDTO> listarSessoes() {
         final List<SessaoVotacao> sessoes = sessaoVotacaoRepository.findAll();
+
+        sessoes.stream()
+                .filter(this::sessaoEstaExpirada)
+                .forEach(this::encerrarSessaoEAtualizarCache);
+
         return sessoes.stream()
                 .map(this::getSessaoVotacaoDTO)
                 .toList();
     }
 
+    @Transactional
     @Cacheable(value = SESSOES, key = "#id")
     public SessaoVotacaoDTO obterSessaoPorId(final Long id) {
-        return sessaoVotacaoRepository.findById(id)
+        final Optional<SessaoVotacao> sessaoVotacaoOptional = sessaoVotacaoRepository.findById(id);
+
+        sessaoVotacaoOptional
+                .filter(this::sessaoEstaExpirada)
+                .ifPresent(this::encerrarSessaoEAtualizarCache);
+
+        return sessaoVotacaoOptional
                 .map(this::getSessaoVotacaoDTO)
                 .orElseThrow(getSessaoNaoEncontradaException(id));
     }
 
-    @CacheEvict(value = SESSOES, key = "#sessaoVotacaoId")
+    @Transactional
     public SessaoVotacao encerrarSessaoSeExpirada(final Long sessaoVotacaoId) {
         final SessaoVotacao sessaoVotacao = sessaoVotacaoRepository.findById(sessaoVotacaoId)
                 .orElseThrow(getSessaoNaoEncontradaException(sessaoVotacaoId));
 
         if (sessaoEstaExpirada(sessaoVotacao)) {
-            return sessaoVotacaoRepository.save(sessaoVotacao);
+            encerrarSessaoEAtualizarCache(sessaoVotacao);
         }
 
         return sessaoVotacao;
+    }
+
+    @CacheEvict(value = {SESSOES, RESULTADO_VOTACAO}, key = "#sessaoVotacao.id")
+    public void encerrarSessaoEAtualizarCache(final SessaoVotacao sessaoVotacao) {
+        sessaoVotacaoRepository.save(sessaoVotacao);
     }
 
     private Supplier<SessaoVotacaoNotFoundException> getSessaoNaoEncontradaException(final Long id) {
@@ -90,8 +111,6 @@ public class SessaoVotacaoService {
     }
 
     private SessaoVotacaoDTO getSessaoVotacaoDTO(final SessaoVotacao sessaoVotacao) {
-        sessaoEstaExpirada(sessaoVotacao);
-
         return SessaoVotacaoDTO.builder()
                 .id(sessaoVotacao.getId())
                 .encerrada(sessaoVotacao.isEncerrada())
@@ -102,7 +121,7 @@ public class SessaoVotacaoService {
     }
 
     private boolean sessaoEstaExpirada(final SessaoVotacao sessaoVotacao) {
-        if(!sessaoVotacao.isEncerrada() && sessaoVotacao.getFim().isBefore(LocalDateTime.now())) {
+        if (!sessaoVotacao.isEncerrada() && sessaoVotacao.getFim().isBefore(LocalDateTime.now())) {
             sessaoVotacao.setEncerrada(true);
             return true;
         }
